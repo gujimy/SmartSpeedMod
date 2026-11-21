@@ -1,0 +1,14 @@
+{
+  "description": "编译期引用程序集清单。tools/fetch-deps.ps1 按此清单从 CesiumLoader 仓库拉取并校验 SHA256。",
+  "baseline": "3.3.0 / hotfix 1.0.0 / Unity 2022",
+  "ref": "master",
+  "source": "https://github.com/higashitaniyume/CesiumLoader/tree/master/refs/game",
+  "assemblies": {
+    "AstralParty.Runtime.dll": "68b848c08562c9f90c18576a33114c29edd6112e2e5da41f329997cb7ca3cde4",
+    "Google.Protobuf.Runtime.dll": "54ea0f7e7afa73beeb1c70cf867f70cfe26fcbf1095d70a440a6188f20c1af43",
+    "UniTask.dll": "01d900c18b4d8c639260a339b15e92fb4c6848c1b48627619f372bbf06a67823",
+    "Unity.Addressables.dll": "70fd4438f534e4ffb22aa82e6941ebcb7ff44ff23e522e73870d6ab251811634",
+    "Unity.ResourceManager.dll": "f832ab6af0bc1a93b5883ad7f717e8f8d03d6adf254c8efaf0e969f3367afcbb",
+    "UnityEngine.CoreModule.dll": "2fe31d172eaac6a40a76d1605377620d496343894d48961eba3efb0342b413d9"
+  }
+}

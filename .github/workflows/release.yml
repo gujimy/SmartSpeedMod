@@ -1,0 +1,173 @@
+name: Release SmartSpeedMod
+
+# 触发条件：
+#   1) 推送 v* tag（如 v1.0.0）—— 主发布入口
+#   2) 推送到 main / master 且 SmartSpeedMod.json 版本号发生变化 —— 自动打 tag 后触发发布
+#   3) 手动触发（workflow_dispatch）
+#
+# 流程：拉取依赖 -> 编译 -> 打包 -> 创建 GitHub Release 并上传资产。
+# 版本号取自 SmartSpeedMod.json 的 version 字段，Release 的 tag / 标题与之对应。
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+      - master
+    paths:
+      # 仅当这些文件变化时才跑（避免无关提交触发）；tag push 不受 paths 限制。
+      - "SmartSpeedMod.json"
+      - "src/**"
+      - "SmartSpeedMod.csproj"
+      - "tools/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 创建 tag 和 Release 需要写权限
+
+jobs:
+  # ---------------------------------------------------------------
+  # 作业 1：若 push 分支且版本号变化，自动创建 v<version> tag。
+  # 创建 tag 会再次触发本工作流的 tag 分支，从而进入发布作业。
+  # tag push / 手动触发时本作业跳过。
+  # ---------------------------------------------------------------
+  auto-tag:
+    name: Auto tag on version bump
+    if: github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.tag.outputs.created }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from manifest
+        id: ver
+        shell: bash
+        run: |
+          version=$(python3 -c "import json;print(json.load(open('SmartSpeedMod.json'))['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "manifest version: $version"
+
+      - name: Check version changed vs previous commit
+        id: changed
+        shell: bash
+        run: |
+          set -e
+          prev=$(git rev-parse HEAD^ 2>/dev/null || echo "")
+          if [ -z "$prev" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "首次提交：视为版本变化"
+            exit 0
+          fi
+          old=$(git show "$prev:SmartSpeedMod.json" 2>/dev/null | python3 -c "import sys,json;print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+          new=$(python3 -c "import json;print(json.load(open('SmartSpeedMod.json'))['version'])")
+          if [ "$old" = "$new" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "版本号未变化 ($new)，跳过打 tag"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "版本号变化: $old -> $new"
+          fi
+
+      - name: Create and push tag
+        id: tag
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          version="${{ steps.ver.outputs.version }}"
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "tag $tag 已存在，跳过"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git push origin "$tag"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "已创建并推送 tag: $tag"
+
+  # ---------------------------------------------------------------
+  # 作业 2：编译 + 发布（tag push / 手动触发时执行）
+  # ---------------------------------------------------------------
+  release:
+    name: Build & Release
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $version = (Get-Content SmartSpeedMod.json -Raw | ConvertFrom-Json).version
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "version: $version"
+
+      - name: Fetch dependencies (game assemblies + SDK)
+        shell: pwsh
+        run: |
+          # CI 直连 GitHub 通常可达；若不可达，fetch-deps.ps1 会自动回退到 gh-proxy。
+          pwsh -NoProfile -File tools/fetch-deps.ps1
+
+      - name: Verify dependencies
+        shell: pwsh
+        run: |
+          $required = @(
+            "refs\CesiumLoader.SDK.dll",
+            "refs\AstralParty.Runtime.dll",
+            "refs\UnityEngine.CoreModule.dll",
+            "refs\UniTask.dll",
+            "refs\Google.Protobuf.Runtime.dll"
+          )
+          foreach ($f in $required) {
+            if (-not (Test-Path -LiteralPath $f)) { throw "缺少依赖: $f" }
+          }
+          Write-Host "依赖校验通过"
+
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build SmartSpeedMod.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path "bin\SmartSpeedMod\SmartSpeedMod.dll")) { throw "编译产物缺失" }
+
+      - name: Stage release package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.ver.outputs.version }}"
+          # 输出在 bin\SmartSpeedMod\（含 dll+json+config+README+LICENSE），压缩整个文件夹
+          New-Item -ItemType Directory -Path "release" -Force | Out-Null
+          Compress-Archive -Path "bin\SmartSpeedMod" -DestinationPath "release/SmartSpeedMod-$version.zip" -Force
+          Write-Host "打包完成: release/SmartSpeedMod-$version.zip"
+          Get-ChildItem "bin\SmartSpeedMod" | Select-Object Name, Length
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: 智能倍速 v${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: |
+            release/SmartSpeedMod-*.zip

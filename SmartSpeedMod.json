@@ -1,0 +1,1 @@
+{"id":"SmartSpeedMod","name":"智能倍速","version":"1.0.0","author":"喵喵酱","description":"局内按设定倍率加速，仅在本人操作倒计时运行时恢复1x；支持热键调速","permissions":5,"sdkVersion":"2.8.6","platforms":["windows"],"dependencies":[],"enabled":true}

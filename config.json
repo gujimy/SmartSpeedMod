@@ -1,0 +1,26 @@
+{
+  "_comments": {
+    "speed": "目标加速倍率,范围 1~10,支持小数如 2.5,默认 2.0",
+    "accelerateInGameOnly": "仅游戏局内加速(战斗房间/吉星小镇单人均算局内),大厅/房间/结算等界面恒 1x,true/false",
+    "timerDetect": "仅在本人操作倒计时运行时恢复1x,true/false",
+    "notify": "切换倍率时是否弹出游戏内提示,true/false",
+    "smartEnabled": "智能模式总开关,关闭则恒定 1x,true/false(无热键,改此配置控制)",
+    "showHud": "是否在游戏内右下角显示当前倍率(极简单行),true/false",
+    "hudX": "HUD 距右边缘的像素距离,默认 0",
+    "hudY": "HUD 距底部的像素距离,默认 0",
+    "hudFontSize": "HUD 字号,10~64,默认 30(右下角方形小块)",
+    "speedUpKey": "加速热键的 UnityEngine.KeyCode 数值(默认 61 = Equals 键)",
+    "speedDownKey": "减速热键的 UnityEngine.KeyCode 数值(默认 45 = Minus 键)"
+  },
+  "speed": 2.0,
+  "accelerateInGameOnly": true,
+  "timerDetect": true,
+  "notify": true,
+  "smartEnabled": true,
+  "showHud": true,
+  "hudX": 0,
+  "hudY": 0,
+  "hudFontSize": 30,
+  "speedUpKey": 61,
+  "speedDownKey": 45
+}

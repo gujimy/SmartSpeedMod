@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>SmartSpeedMod</AssemblyName>
+    <RootNamespace>SmartSpeedMod</RootNamespace>
+    <!-- 程序集版本：CesiumLoader 的 mod 列表读这里，需与 SmartSpeedMod.json 的 version 一致 -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- 编译产物放进 bin\SmartSpeedMod\，整个文件夹可直接拖进 mods/ -->
+    <OutputPath>bin\SmartSpeedMod\</OutputPath>
+    <NoWarn>CS0067;CS0414;CS0169</NoWarn>
+    <!-- 源码集中在 src/，关闭默认的递归编译，显式包含 -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src\**\*.cs" />
+  </ItemGroup>
+
+  <!-- 部署所需文件：编译时一并复制到 bin/，让输出目录可直接放进 mods/ -->
+  <ItemGroup>
+    <None Include="SmartSpeedMod.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="config.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="README.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    引用程序集解析优先级：
+    1) 仓库内 refs/ 目录（由 tools/fetch-deps.ps1 拉取，CI 使用）
+    2) 本机路径（开发者未拉取 refs 时的本地回退）
+    两个属性都可通过命令行 /p: 覆盖，方便 CI 注入。
+  -->
+  <PropertyGroup>
+    <GameRefs Condition="'$(GameRefs)' == ''">$(MSBuildProjectDirectory)\refs</GameRefs>
+    <SdkRefs Condition="'$(SdkRefs)' == ''">$(GameRefs)\sdk</SdkRefs>
+    <!-- 本地回退路径（仅当 refs 下没有对应 dll 时由下方 Condition 使用） -->
+    <LocalGameRoot>D:\SteamLibrary\steamapps\common\Astral Party\8vJXn6CN</LocalGameRoot>
+    <LocalGameDump>G:\Game\吉星派对解密\extracted</LocalGameDump>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CesiumLoader SDK：优先 refs/sdk，回退本机 ModLoader/sdk -->
+    <Reference Include="CesiumLoader.SDK">
+      <HintPath Condition="Exists('$(SdkRefs)\CesiumLoader.SDK.dll')">$(SdkRefs)\CesiumLoader.SDK.dll</HintPath>
+      <HintPath Condition="!Exists('$(SdkRefs)\CesiumLoader.SDK.dll')">$(LocalGameRoot)\AstralParty_ModLoader\sdk\CesiumLoader.SDK.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <!-- 游戏引用程序集：优先 refs/game，回退本机提取目录 -->
+    <Reference Include="AstralParty.Runtime">
+      <HintPath Condition="Exists('$(GameRefs)\AstralParty.Runtime.dll')">$(GameRefs)\AstralParty.Runtime.dll</HintPath>
+      <HintPath Condition="!Exists('$(GameRefs)\AstralParty.Runtime.dll')">$(LocalGameDump)\AstralParty.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath Condition="Exists('$(GameRefs)\UnityEngine.CoreModule.dll')">$(GameRefs)\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath Condition="!Exists('$(GameRefs)\UnityEngine.CoreModule.dll')">$(LocalGameDump)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UniTask">
+      <HintPath Condition="Exists('$(GameRefs)\UniTask.dll')">$(GameRefs)\UniTask.dll</HintPath>
+      <HintPath Condition="!Exists('$(GameRefs)\UniTask.dll')">$(LocalGameDump)\UniTask.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Google.Protobuf.Runtime">
+      <HintPath Condition="Exists('$(GameRefs)\Google.Protobuf.Runtime.dll')">$(GameRefs)\Google.Protobuf.Runtime.dll</HintPath>
+      <HintPath Condition="!Exists('$(GameRefs)\Google.Protobuf.Runtime.dll')">$(LocalGameDump)\Google.Protobuf.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,48 @@
+# ============ 编译产物 ============
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+[Bb]uild/
+artifacts/
+*.dll
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+
+# ============ 本地构建配置（含个人路径） ============
+# csproj 里的 ModSdk / GameDump 是本机绝对路径，开发者需按自己的环境修改，
+# 若你维护了一份本地配置，请加入忽略。
+*.csproj.user
+*.user
+*.suo
+
+# ============ 依赖目录（由 tools/fetch-deps.ps1 拉取，不进仓库） ============
+refs/
+
+# ============ NuGet ============
+*.nupkg
+packages/
+.nuget/
+
+# ============ IDE / 编辑器 ============
+.vs/
+.vscode/
+.idea/
+*.sln.docstates
+*.userprefs
+
+# ============ 临时 / 系统文件 ============
+*.tmp
+*.temp
+*.log
+*.cache
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============ 测试 / 输出目录 ============
+[Tt]est[Rr]esults/
+*.trx
+coverage/
